@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define MALLOC_ZERO(x,siz) x = malloc(siz); memset(x,0,siz)
 char* strDisclaimer =
@@ -25,10 +26,12 @@ char* strDisclaimer =
 char* strCreator = "Joe";
 char* strModuleName = "MyModule";
 char* strModuleDescription = "My Description";
+char* strCompany = NULL;
 char* modulename;
 char* MODULENAME;
 char* filename_c;
 char* filename_h;
+bool cppMode = false;
 
 const char appname[] = "codetemplategen";
 const char* commentHeaderStart =
@@ -75,7 +78,11 @@ void writeDisclaimer(FILE *fil)
     fprintf(fil,"%s", commentHeaderStart);
     fprintf(fil," ** Created by %s\r\n",strCreator);
     fprintf(fil," **\r\n");
-    fprintf(fil," ** Copyright © %d io-expert.com. All rights reserved.\r\n",tm.tm_year + 1900);
+    if (strCompany == NULL)
+    {
+        strCompany = strCreator;
+    }
+    fprintf(fil," ** Copyright © %d %s. All rights reserved.\r\n",tm.tm_year + 1900,strCompany);
     fprintf(fil," **\r\n");
     fprintf(fil,"%s\r\n",strDisclaimer);
     fprintf(fil,"%s",commentHeaderEnd);
@@ -120,6 +127,12 @@ void printHelp(void)
     printf("\n");
     printf("-d description\n");
     printf("   description = Description\n");
+    printf("\n");
+    printf("[-o]\n");
+    printf("   optional company / organisation\n");
+    printf("\n");
+    printf("[-cpp]\n");
+    printf("   optional geerate cpp extension\n");
 }
 
 
@@ -148,12 +161,15 @@ int main(int argc, const char * argv[]) {
     if (argc <= 1)
     {
         printHelp();
-        //return -1;
+        return -1;
     }
     
     for(int i = 1; i < argc;i++)
     {
         if (strncmp(argv[i],"-c",2) == 0)
+        {
+            cppMode = true;
+        } else if (strncmp(argv[i],"-cpp",2) == 0)
         {
             strCreator = (char*)argv[i + 1];
         } else if (strncmp(argv[i],"-m",2) == 0)
@@ -162,6 +178,9 @@ int main(int argc, const char * argv[]) {
         } else if (strncmp(argv[i],"-d",2) == 0)
         {
             strModuleDescription = (char*)argv[i + 1];
+        } else if (strncmp(argv[i],"-o",2) == 0)
+        {
+            strCompany = (char*)argv[i + 1];
         }
     }
     
@@ -174,7 +193,14 @@ int main(int argc, const char * argv[]) {
     StringToUpper(MODULENAME,strModuleName);
     
     StringToLower(filename_c,strModuleName);
-    strcat(filename_c,".c");
+    if (cppMode)
+    {
+        strcat(filename_c,".cpp");
+    }
+    else
+    {
+        strcat(filename_c,".c");
+    }
     StringToLower(filename_h,strModuleName);
     strcat(filename_h,".h");
     
@@ -198,14 +224,23 @@ int main(int argc, const char * argv[]) {
     writeDisclaimer(c_file);
     writeHistory(c_file);
     
-    fprintf(c_file,"#define __%s_C__\r\n\r\n",MODULENAME);
+    if (cppMode)
+    {
+        fprintf(c_file,"#define __%s_CPP__\r\n\r\n",MODULENAME);
+    }
+    else
+    {
+        fprintf(c_file,"#define __%s_C__\r\n\r\n",MODULENAME);
+    }
     
     fprintf(c_file,"%s",commentHeaderStart);
     fprintf(c_file," ** Include files\r\n");
     fprintf(c_file,"%s",commentHeaderEnd);
     
     fprintf(c_file,"\r\n");
-    fprintf(c_file,"#include \"base_types.h\"\r\n");
+    fprintf(c_file,"#include <stdint.h>\r\n");
+    fprintf(c_file,"#include <stdbool.h>\r\n");
+    //fprintf(c_file,"#include \"base_types.h\"\r\n");
     fprintf(c_file,"#include \"%s\"\r\n",filename_h);
     fprintf(c_file,"\r\n");
             
@@ -235,11 +270,11 @@ int main(int argc, const char * argv[]) {
     
     fprintf(c_file,"\r\n");
     
-    fprintf(c_file,"en_result_t %s_Init(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
+    fprintf(c_file,"int %s_Init(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
     fprintf(c_file,"{\r\n");
     fprintf(c_file,"}\r\n\r\n");
             
-    fprintf(c_file,"en_result_t %s_Deinit(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
+    fprintf(c_file,"int %s_Deinit(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
     fprintf(c_file,"{\r\n");
     fprintf(c_file,"}\r\n\r\n");
     
@@ -288,7 +323,10 @@ int main(int argc, const char * argv[]) {
     fprintf(h_file," ** (Global) Include files\r\n");
     fprintf(h_file,"%s",commentHeaderEnd);
     
-    fprintf(h_file,"#include \"base_types.h\"\r\n\r\n");
+    fprintf(c_file,"#include <stdint.h>\r\n");
+    fprintf(c_file,"#include <stdbool.h>\r\n");
+    fprintf(c_file,"\r\n");
+    //fprintf(c_file,"#include \"base_types.h\"\r\n");
     
     fprintf(h_file,"%s",commentHeaderStart);
     fprintf(h_file," ** Global pre-processor symbols/macros ('#define') \r\n");
@@ -312,8 +350,8 @@ int main(int argc, const char * argv[]) {
     fprintf(h_file,"%s",commentHeaderEnd);
     
     fprintf(h_file,"\r\n");
-    fprintf(h_file,"en_result_t %s_Init(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
-    fprintf(h_file,"en_result_t %s_Deinit(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
+    fprintf(h_file,"int %s_Init(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
+    fprintf(h_file,"int %s_Deinit(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
     fprintf(h_file,"\r\n");
     
     fprintf(h_file,"//@} // %sGroup\r\n\r\n",strModuleName);
