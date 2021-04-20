@@ -166,21 +166,25 @@ int main(int argc, const char * argv[]) {
     
     for(int i = 1; i < argc;i++)
     {
-        if (strncmp(argv[i],"-c",2) == 0)
+        if (strncmp(argv[i],"-cpp",4) == 0)
         {
             cppMode = true;
-        } else if (strncmp(argv[i],"-cpp",2) == 0)
+        } else if (strncmp(argv[i],"-c",2) == 0)
         {
             strCreator = (char*)argv[i + 1];
+            i++;
         } else if (strncmp(argv[i],"-m",2) == 0)
         {
             strModuleName = (char*)argv[i + 1];
+            i++;
         } else if (strncmp(argv[i],"-d",2) == 0)
         {
             strModuleDescription = (char*)argv[i + 1];
+            i++;
         } else if (strncmp(argv[i],"-o",2) == 0)
         {
             strCompany = (char*)argv[i + 1];
+            i++;
         }
     }
     
