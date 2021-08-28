@@ -34,9 +34,12 @@ codetemplategen -c Joe -m MyModule -d "This is my module"
 -d description
    description = Description
 
-[-o]
+[-o organisation]
    optional company / organisation
 
 [-cpp]
-   optional geerate cpp extension
+   optional generate cpp extension
+
+[-p project_name]
+   optional generate project
 ````
