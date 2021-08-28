@@ -371,41 +371,60 @@ int main(int argc, const char * argv[]) {
         char strPathSource[512] = {0}; 
         char strPathVsCode[512] = {0};
 
+        printf("\nGenerating Project: %s\n",projectname);
+
         sprintf(strPathVsCode,"%s/.vscode",projectname);
         sprintf(strPathSource,"%s/src",projectname);
 
+        printf("\n  Generating directory: %s\n",strPathVsCode);
         if (stat(strPathVsCode, &st) == -1) {
             mkdir(strPathVsCode, 0777);
         }
 
+        printf("\n  Generating directory: %s\n",projectname);
         if (stat(projectname, &st) == -1) {
             mkdir(projectname, 0777);
         }
 
+        printf("\n  Generating project files:\n");
+
+        printf("    Adding File: %s\n","CMakeLists.txt");
         WriteToFile(projectname,"CMakeLists.txt",strTemplateCmakeLists,projectname);
+        printf("    Adding File: %s\n","build.sh");
         WriteToFile(projectname,"build.sh",strBuildLinux);
+        printf("    Adding File: %s\n","build.command");
         WriteToFile(projectname,"build.command",strBuildMac);
+        printf("    Adding File: %s\n","build.bat");
         WriteToFile(projectname,"build.bat",strBuildWindows);
+        printf("    Adding File: %s\n","README.md");
         WriteToFile(projectname,"README.md",strReadme,projectname);
+        printf("    Adding File: %s\n","DISCLAIMER.md");
         WriteToFile(projectname,"DISCLAIMER.md",strDisclaimer);
+        printf("    Adding File: %s\n","launch.json");
         WriteToFile(strPathVsCode,"launch.json",strVSCodeLaunch,projectname,projectname,projectname);
+        printf("    Adding File: %s\n","tasks.json");
         WriteToFile(strPathVsCode,"tasks.json",strVSCodeTasks);
 
+        printf("\n  Generating directory: %s\n",strPathSource);
         if (stat(strPathSource, &st) == -1) {
             mkdir(strPathSource, 0777);
         }
         //sprintf(tmp,"-c \"%s\" -m \"%s\" -d \"%s\" -o \"%s\"",strCreator,strModuleName,strModuleDescription,strCompany);
-        sprintf(tmp,"%s -w \"%s\" -c \"%s\" -m \"%s\" -d \"%s\"",argv[0],strPathSource,strCreator,"Main","Main File");
+        printf("\n  Generating main module: \n");
+        sprintf(tmp,"    %s -w \"%s\" -c \"%s\" -m \"%s\" -d \"%s\"",argv[0],strPathSource,strCreator,"Main","Main File");
         if (cppMode)
         {
             strcat(tmp," -cpp");
         }
         if (strCompany != NULL)
         {
-            strcat(tmp," -o ");
+            strcat(tmp," -o \"");
             strcat(tmp,strCompany);
+            strcat(tmp,"\"");
         }
+        printf("%s\n",tmp);
         system(tmp); 
+        printf("\ndone.\n\n");
         return 0;
     }
 
