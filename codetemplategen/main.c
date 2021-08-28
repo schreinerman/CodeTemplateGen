@@ -273,7 +273,6 @@ void generateDate(char* pStringOut)
  @return <#return value description#>
  */
 int main(int argc, const char * argv[]) {
-    printf("Welcome\n"); 
     if (argc <= 1)
     {
         printHelp();
@@ -312,7 +311,6 @@ int main(int argc, const char * argv[]) {
             i++;
         } else if (strncmp(argv[i],"-w",2) == 0)
         {
-            printf("Changing into Dir: %s\n",argv[i + 1]);
             chdir(argv[i + 1]);
             i++;
         } else if (strncmp(argv[i],"-txt2c",6) == 0)
