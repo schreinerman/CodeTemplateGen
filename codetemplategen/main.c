@@ -12,26 +12,51 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <stdarg.h>
 
 #define MALLOC_ZERO(x,siz) x = malloc(siz); memset(x,0,siz)
-char* strDisclaimer =
-" ** 1. Redistributions of source code must retain the above copyright notice,\r\n"
-" **    this condition and the following disclaimer.\r\n"
-" **\r\n"
-" ** This software is provided by the copyright holder and contributors \"AS IS\"\r\n"
-" ** and any warranties related to this software are DISCLAIMED.\r\n"
-" ** The copyright owner or contributors be NOT LIABLE for any damages caused\r\n"
-" ** by use of this software.\r\n";
+
+#if defined(WIN32)
+#  define DIR_SEPARATOR '\\'
+#  define DIR_SEPARATOR_STRING "\\"
+#else
+#  define DIR_SEPARATOR '/'
+#  define DIR_SEPARATOR_STRING "/"
+#endif
+
+
+
+extern const char* strTemplateCmakeLists;
+extern const char* strDisclaimer;
+extern const char* strBuildLinux;
+extern const char* strBuildMac;
+extern const char* strBuildWindows;
+extern const char* strReadme;
+extern const char* strVSCodeTasks;
+extern const char* strVSCodeLaunch;
 
 char* strCreator = "Joe";
 char* strModuleName = "MyModule";
 char* strModuleDescription = "My Description";
 char* strCompany = NULL;
+char* strProjectName = "MyProject";
+char* projectname = NULL;
+char* strOut = NULL;
+char* strIn = NULL;
+
+struct stat st = {0};
 char* modulename;
 char* MODULENAME;
 char* filename_c;
 char* filename_h;
 bool cppMode = false;
+bool isMain = false;
+bool genProject = false;
+bool txt2c = false;
+bool bin2c = false;
 
 const char appname[] = "codetemplategen";
 const char* commentHeaderStart =
@@ -40,6 +65,94 @@ const char* commentHeaderStart =
 const char* commentHeaderEnd =
 " *******************************************************************************\r\n"
 " */\r\n\r\n";
+
+/**
+ Write content to file
+
+ @param path Outpath
+ @param filename Filename
+ @param strContent Content
+ @param ... Arguments
+ */
+void WriteToFile(char* path, char* filename, char* strContent,...)
+{
+    va_list ap;
+    va_start(ap, strContent);
+    char filepath[512] = {0};
+    strcat(filepath,path);
+    strcat(filepath,DIR_SEPARATOR_STRING);
+    strcat(filepath,filename);
+    FILE *file = fopen(filepath, "w");
+    if (file != NULL)
+    {
+        vfprintf(file,strContent,ap);
+        fclose(file);
+    }
+    va_end(ap);
+}
+
+/**
+ Write Txt 2 C
+
+ @param path Outpath
+ @param txtFile Input Filename
+ @param cFile Output Filename
+ */
+void Txt2C(char* txtFile,char* cFile)
+{
+    FILE *txtFileHandle = fopen(txtFile, "r");
+    FILE *cFileHandle = fopen(cFile, "w");
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t readsz;
+
+    if (txtFileHandle == NULL)
+    {
+        return;
+    }
+    if (cFileHandle == NULL)
+    {
+        return;
+    }
+    fprintf(cFileHandle,"const char* strFileName = \r\n");
+    while ((readsz = getline(&line, &len, txtFileHandle)) != -1) {
+        fputc('"',cFileHandle);
+        for(int i = 0;i < readsz;i++)
+        {
+            if (line[i] == '\r')
+            {
+                //ignore
+            }
+            else if (line[i] == '\n')
+            {
+                //ignore    
+            }
+            else if (line[i] == '%')
+            {
+                fprintf(cFileHandle,"\\%");
+            } else if (line[i] == '\\')
+            {
+                fprintf(cFileHandle,"\\\\");
+            } else if (line[i] == '"')
+            {
+                fprintf(cFileHandle,"\\\"");
+            } else
+            {
+                fputc(line[i],cFileHandle);
+            }
+        }
+        fprintf(cFileHandle,"\\r\\n\"\r\n");
+    }
+    fprintf(cFileHandle,";");
+    fclose(txtFileHandle);
+    fclose(cFileHandle);
+}
+
+void Bin2C(char* binFile,char* cFile)
+{
+
+}
+
 
 
 /**
@@ -157,7 +270,7 @@ void generateDate(char* pStringOut)
  @return <#return value description#>
  */
 int main(int argc, const char * argv[]) {
-
+    printf("Welcome\n"); 
     if (argc <= 1)
     {
         printHelp();
@@ -181,20 +294,51 @@ int main(int argc, const char * argv[]) {
         {
             strModuleDescription = (char*)argv[i + 1];
             i++;
+        } else if (strncmp(argv[i],"-out",4) == 0)
+        {
+            strOut = (char*)argv[i + 1];
+            i++;
         } else if (strncmp(argv[i],"-o",2) == 0)
         {
             strCompany = (char*)argv[i + 1];
             i++;
+        } else if (strncmp(argv[i],"-p",2) == 0)
+        {
+            strProjectName = (char*)argv[i + 1];
+            genProject = true;
+            i++;
+        } else if (strncmp(argv[i],"-w",2) == 0)
+        {
+            printf("Changing into Dir: %s\n",argv[i + 1]);
+            chdir(argv[i + 1]);
+            i++;
+        } else if (strncmp(argv[i],"-txt2c",6) == 0)
+        {
+            strIn = (char*)argv[i + 1];
+            txt2c = true;
+            i++;
+        } else if (strncmp(argv[i],"-bin2c",6) == 0)
+        {
+            strIn = (char*)argv[i + 1];
+            bin2c = true;
+            i++;
         }
     }
-    
+
+    MALLOC_ZERO(projectname,100);
     MALLOC_ZERO(modulename,100);
     MALLOC_ZERO(MODULENAME,100);
     MALLOC_ZERO(filename_c,100);
     MALLOC_ZERO(filename_h,100);
     
+    StringToLower(projectname,strProjectName);
     StringToLower(modulename,strModuleName);
     StringToUpper(MODULENAME,strModuleName);
+
+    if (strcmp(MODULENAME,"MAIN") == 0)
+    {
+        isMain = true;
+    }
     
     StringToLower(filename_c,strModuleName);
     if (cppMode)
@@ -207,7 +351,63 @@ int main(int argc, const char * argv[]) {
     }
     StringToLower(filename_h,strModuleName);
     strcat(filename_h,".h");
+
+    if (txt2c)
+    {
+        Txt2C(strIn,strOut);
+        return 0;
+    }
+
+    if (bin2c)
+    {
+        Bin2C(strIn,strOut);
+        return 0;
+    }
     
+    if (genProject)
+    {
+        char tmp[512] = {0}; 
+        char strPathSource[512] = {0}; 
+        char strPathVsCode[512] = {0};
+
+        sprintf(strPathVsCode,"%s/.vscode",projectname);
+        sprintf(strPathSource,"%s/src",projectname);
+
+        if (stat(strPathVsCode, &st) == -1) {
+            mkdir(strPathVsCode, 0777);
+        }
+
+        if (stat(projectname, &st) == -1) {
+            mkdir(projectname, 0777);
+        }
+
+        WriteToFile(projectname,"CMakeLists.txt",strTemplateCmakeLists,projectname);
+        WriteToFile(projectname,"build.sh",strBuildLinux);
+        WriteToFile(projectname,"build.command",strBuildMac);
+        WriteToFile(projectname,"build.bat",strBuildWindows);
+        WriteToFile(projectname,"README.md",strReadme,projectname);
+        WriteToFile(projectname,"DISCLAIMER.md",strDisclaimer);
+        WriteToFile(strPathVsCode,"launch.json",strVSCodeLaunch,projectname,projectname,projectname);
+        WriteToFile(strPathVsCode,"tasks.json",strVSCodeTasks);
+
+        if (stat(strPathSource, &st) == -1) {
+            mkdir(strPathSource, 0777);
+        }
+        //sprintf(tmp,"-c \"%s\" -m \"%s\" -d \"%s\" -o \"%s\"",strCreator,strModuleName,strModuleDescription,strCompany);
+        sprintf(tmp,"%s -w \"%s\" -c \"%s\" -m \"%s\" -d \"%s\"",argv[0],strPathSource,strCreator,"Main","Main File");
+        if (cppMode)
+        {
+            strcat(tmp," -cpp");
+        }
+        if (strCompany != NULL)
+        {
+            strcat(tmp," -o ");
+            strcat(tmp,strCompany);
+        }
+        system(tmp); 
+        return 0;
+    }
+
     FILE *c_file = fopen(filename_c, "w");
     if (c_file == NULL)
     {
@@ -242,6 +442,12 @@ int main(int argc, const char * argv[]) {
     fprintf(c_file,"%s",commentHeaderEnd);
     
     fprintf(c_file,"\r\n");
+    if (isMain)
+    {
+        fprintf(c_file,"#include <stdio.h>\r\n");
+        fprintf(c_file,"#include <stdlib.h>\r\n");
+    }
+    fprintf(c_file,"#include <string.h> //required also for memset, memcpy, etc.\r\n");
     fprintf(c_file,"#include <stdint.h>\r\n");
     fprintf(c_file,"#include <stdbool.h>\r\n");
     //fprintf(c_file,"#include \"base_types.h\"\r\n");
@@ -274,14 +480,29 @@ int main(int argc, const char * argv[]) {
     
     fprintf(c_file,"\r\n");
     
-    fprintf(c_file,"int %s_Init(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
-    fprintf(c_file,"{\r\n");
-    fprintf(c_file,"}\r\n\r\n");
-            
-    fprintf(c_file,"int %s_Deinit(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
-    fprintf(c_file,"{\r\n");
-    fprintf(c_file,"}\r\n\r\n");
-    
+    if (isMain)
+    {
+        fprintf(c_file,"int main(int argc, const char * argv[])\r\n");
+        fprintf(c_file,"{\r\n");
+        fprintf(c_file,"    \r\n");
+        fprintf(c_file,"    //add you initialization here...\r\n");
+        fprintf(c_file,"    \r\n");
+        fprintf(c_file,"    //main loop\r\n");
+        fprintf(c_file,"    while(1)\r\n");
+        fprintf(c_file,"    {\r\n");
+        fprintf(c_file,"        //add your looping code here...\r\n");
+        fprintf(c_file,"    }\r\n");
+        fprintf(c_file,"}\r\n\r\n");
+    } else
+    {
+        fprintf(c_file,"int %s_Init(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
+        fprintf(c_file,"{\r\n");
+        fprintf(c_file,"}\r\n\r\n");
+                
+        fprintf(c_file,"int %s_Deinit(stc_%s_handle_t* pstcHandle)\r\n",strModuleName,modulename);
+        fprintf(c_file,"{\r\n");
+        fprintf(c_file,"}\r\n\r\n");
+    }
     fprintf(c_file,"\r\n");
     
     fprintf(c_file,"%s",commentHeaderStart);
@@ -340,10 +561,13 @@ int main(int argc, const char * argv[]) {
     fprintf(h_file," ** Global type definitions ('typedef') \r\n");
     fprintf(h_file,"%s",commentHeaderEnd);
     
-    fprintf(h_file,"typedef struct stc_%s_handle\r\n",modulename);
-    fprintf(h_file,"{\r\n");
-    fprintf(h_file,"    uint8_t u8Dummy;\r\n");
-    fprintf(h_file,"} stc_%s_handle_t;\r\n\r\n",modulename);
+    if (!isMain)
+    {
+        fprintf(h_file,"typedef struct stc_%s_handle\r\n",modulename);
+        fprintf(h_file,"{\r\n");
+        fprintf(h_file,"    uint8_t u8Dummy;\r\n");
+        fprintf(h_file,"} stc_%s_handle_t;\r\n\r\n",modulename);
+    }
     
     fprintf(h_file,"%s",commentHeaderStart);
     fprintf(h_file," ** Global variable declarations ('extern', definition in C source)\r\n");
@@ -352,11 +576,13 @@ int main(int argc, const char * argv[]) {
     fprintf(h_file,"%s",commentHeaderStart);
     fprintf(h_file," ** Global function prototypes ('extern', definition in C source) \r\n");
     fprintf(h_file,"%s",commentHeaderEnd);
-    
     fprintf(h_file,"\r\n");
-    fprintf(h_file,"int %s_Init(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
-    fprintf(h_file,"int %s_Deinit(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
-    fprintf(h_file,"\r\n");
+    if (!isMain)
+    {
+        fprintf(h_file,"int %s_Init(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
+        fprintf(h_file,"int %s_Deinit(stc_%s_handle_t* pstcHandle);\r\n",strModuleName,modulename);
+        fprintf(h_file,"\r\n");
+    }
     
     fprintf(h_file,"//@} // %sGroup\r\n\r\n",strModuleName);
     

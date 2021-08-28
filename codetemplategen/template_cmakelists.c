@@ -1,0 +1,18 @@
+const char* strTemplateCmakeLists = 
+"cmake_minimum_required(VERSION 3.7)\r\n"
+"project(%s)\r\n"
+"\r\n"
+"set(CMAKE_CXX_STANDARD 11)\r\n"
+"set(CAMAKE_C_STANDARD 11)\r\n"
+"\r\n"
+"SET(CMAKE_MODULE_PATH \"${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules\" ${CMAKE_MODULE_PATH})\r\n"
+"\r\n"
+"message(STATUS \"CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}\")\r\n"
+"\r\n"
+"SET(SOURCE_PATH \"src\")\r\n"
+"set(SOURCE_FILES ${SOURCE_FILES} ${SOURCE_PATH}/main.c)\r\n"
+"add_executable(${PROJECT_NAME} ${SOURCE_FILES})\r\n"
+"\r\n"
+"install(TARGETS ${PROJECT_NAME} DESTINATION bin)\r\n"
+"\r\n"
+"set(CMAKE_CXX_FLAGS \"-g -\")\r\n";

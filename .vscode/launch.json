@@ -1,0 +1,41 @@
+{
+    // Verwendet IntelliSense zum Ermitteln möglicher Attribute.
+    // Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.
+    // Weitere Informationen finden Sie unter https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/codetemplategen",
+            "args": ["-c 'Manuel Schreiner'","-m 'main'","-d 'This is a test'","-o 'IO-Expert.com'"],
+            "stopAtEntry": true,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "linux": {
+                "name": "Debug",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/build/codetemplategen",
+                "MIMode": "gdb",
+            },
+            "windows": {
+                "name": "Debug",
+                "type": "cppdbg",
+                "request": "launch",
+                "program": "${workspaceFolder}/build/codetemplategen",
+                "MIMode": "gdb",
+            },
+            "MIMode": "lldb",
+            "setupCommands": [
+                {
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "dependsOn": ["build"]
+        }
+    ]
+}
