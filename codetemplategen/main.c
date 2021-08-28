@@ -245,7 +245,10 @@ void printHelp(void)
     printf("   optional company / organisation\n");
     printf("\n");
     printf("[-cpp]\n");
-    printf("   optional geerate cpp extension\n");
+    printf("   optional generate cpp extension\n");
+    printf("\n");
+    printf("[-p project_name]\n");
+    printf("   optional generate project\n");
 }
 
 
